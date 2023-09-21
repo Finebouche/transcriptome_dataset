@@ -1,0 +1,71 @@
+R commands for differential expression analysis using EdgeR
+R version 3.3.0 (2016-05-03)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 14.04.3 LTS
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+ [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=fr_FR.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=fr_FR.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=fr_FR.UTF-8 LC_IDENTIFICATION=C       
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] edgeR_3.12.1 limma_3.26.9
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_0.12.5                RColorBrewer_1.1-2         futile.logger_1.4.1       
+ [4] GenomeInfoDb_1.6.3         plyr_1.8.4                 XVector_0.10.0            
+ [7] futile.options_1.0.0       tools_3.3.0                zlibbioc_1.16.0           
+[10] rpart_4.1-10               RSQLite_1.0.0              annotate_1.48.0           
+[13] gtable_0.2.0               lattice_0.20-33            Matrix_1.2-6              
+[16] DBI_0.4-1                  parallel_3.3.0             RcppArmadillo_0.7.100.3.1 
+[19] gridExtra_2.2.1            genefilter_1.52.1          cluster_2.0.4             
+[22] S4Vectors_0.8.11           IRanges_2.4.8              locfit_1.5-9.1            
+[25] stats4_3.3.0               grid_3.3.0                 nnet_7.3-12               
+[28] Biobase_2.30.0             data.table_1.9.6           AnnotationDbi_1.32.3      
+[31] XML_3.98-1.4               survival_2.39-4            BiocParallel_1.4.3        
+[34] foreign_0.8-66             latticeExtra_0.6-28        Formula_1.2-1             
+[37] geneplotter_1.48.0         DESeq2_1.10.1              ggplot2_2.1.0             
+[40] lambda.r_1.1.7             Hmisc_3.17-4               scales_0.4.0              
+[43] splines_3.3.0              BiocGenerics_0.16.1        GenomicRanges_1.22.4      
+[46] SummarizedExperiment_1.0.2 xtable_1.8-2               colorspace_1.2-6          
+[49] acepack_1.3-3.3            munsell_0.4.3              chron_2.3-47 
+# Load samples and adjust organization
+geneCounts <- read.delim("/home/koen/Allcolumns_analyze/stargenecounts_all_trimmed75bp.txt")
+row.names(geneCounts) <- geneCounts$GeneID
+geneCounts$GeneID <- NULL
+
+#Specify the experimental groups
+group <- c("Spared1st_4","Spared1st_23","Deprived_4","Deprived_23","Spared1st_4","Spared1st_23","Deprived_4","Deprived_23","Ctrl_4","Ctrl_23","Ctrl_4","Ctrl_23","Ctrl_4","Ctrl_23","Ctrl_4","Ctrl_23","Spared1st_4","Spared1st_23","Deprived_4","Deprived_23","Spared1st_4","Spared1st_23","Deprived_4","Deprived_23","Spared2nd_23","Spared2nd_23","Spared2nd_23","Spared2nd_23","Spared2nd_4","Spared2nd_4","Spared2nd_4","Spared2nd_4")
+
+#Load edgeR
+library("edgeR")
+
+#Load the data into edgeR DGEList data class:
+deg <- DGEList(counts=geneCounts, group = group)
+
+#Confirm that samples are in the correct groups
+deg$samples
+
+#Filter for genes that have sufficient support (CPM >1 in all 4 replicates per group)
+keep <- rowSums(cpm(deg)>1) >= 4 
+deg <- deg[keep, , keep.lib.sizes=FALSE]
+
+#Calculate normalization factors
+
+deg <- calcNormFactors(deg)
+#Estimate dispersions
+
+deg <- estimateCommonDisp(deg)
+deg <- estimateTagwiseDisp(deg)
+
+#Calculate differential gene expression between a pair of experimental groups
+de <- exactTest(deg, pair = c("Ctrl_23", "Ctrl_4"))
+tt <- topTags(de, n=nrow(deg))
+
+#Write resulting differentially expressed gene list to CSV file
+write.csv(tt$table, file d in ="edgeR_Ctrl4vsCtrl23.csv") 
+
